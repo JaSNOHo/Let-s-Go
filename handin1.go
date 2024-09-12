@@ -82,7 +82,7 @@ func (p *Philosopher) dine(done chan bool) {
 func fork(f *Fork) {
 	for {
 		f.ch <- true // Signal that the fork is available
-		<-f.ch       // Wait for a philosopher to take it
+		<-f.ch       // Wait for a philosopher to take it (waits for a value to be sent over the channel)
 	}
 }
 
@@ -108,7 +108,7 @@ func main() {
 
 	// Wait for all philosophers to finish
 	for i := 0; i < 5; i++ {
-		<-done
+		<-done //waits for a value to be sent over the channel
 	}
 
 	fmt.Println("All philosophers have eaten at least 3 times.")
