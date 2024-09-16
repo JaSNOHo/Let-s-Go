@@ -1,6 +1,15 @@
-// must not lead to deadlock
-// phil-forks are arranged around a round table alternately
-// phils need 2 forks to eat, max 2 phils can eat at the same time
+/*
+- The program ensures that the forks(represented by channels) are always
+available in a non-blocking way.
+	- The channel has a buffersize of 1, meaning it can only hold one message:
+	true or waiting for a false.
+- The goroutines constantly listens and handles the availability of the fork
+asynchronously and randomised.
+This combination ensures that philosophers can eventually get forks, eat, and
+release the forks in a deadlock-free manner.
+Meaning its non-blocking and prevents vircular waiting conditions which are the
+main causes of deadlock.
+*/
 
 package main
 
@@ -9,19 +18,22 @@ import (
 	"math/rand"
 	"time"
 )
-//Fork struct represents the forks, communicating if its available by a channel
+
+// Fork struct represents the forks, communicating if its available by a channel
 type Fork struct {
 	id int
 	ch chan bool
 }
-//Philosher struct represents the philosopher, keeps tracks of the forks
+
+// Philosher struct represents the philosopher, keeps tracks of the forks
 type Philosopher struct {
-	id int
-	leftFork *Fork
+	id        int
+	leftFork  *Fork
 	rightFork *Fork
-	mealsAmt int
+	mealsAmt  int
 }
-//make philos w the feilds from Philosopher?
+
+// make philos w the fields from Philosopher?
 func hollenborg(left, right *Fork, done chan bool) {
 	philosopher := Philosopher{id: 1, leftFork: left, rightFork: right}
 	philosopher.dine(done)
@@ -113,4 +125,3 @@ func main() {
 
 	fmt.Println("All philosophers have eaten at least 3 times.")
 }
-
