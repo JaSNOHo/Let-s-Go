@@ -1,6 +1,15 @@
-// must not lead to deadlock
-// phil-forks are arranged around a round table alternately
-// phils need 2 forks to eat, max 2 phils can eat at the same time
+/*
+- The program ensures that the forks(represented by channels) are always
+available in a non-blocking way.
+	- The channel has a buffersize of 1, meaning it can only hold one message:
+	true or waiting for a false.
+- The goroutines constantly listens and handles the availability of the fork
+asynchronously and randomised.
+This combination ensures that philosophers can eventually get forks, eat, and
+release the forks in a deadlock-free manner.
+Meaning its non-blocking and prevents vircular waiting conditions which are the
+main causes of deadlock.
+*/
 package main
 
 func main() {
