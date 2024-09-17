@@ -98,7 +98,7 @@ func fork(f *Fork) {
 	}
 }
 
-func main() {
+func main1() {
 	rand.Seed(time.Now().UnixNano())
 
 	// Create 5 forks and their channels
