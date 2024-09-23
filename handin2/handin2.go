@@ -1,43 +1,59 @@
 package main
 
 import (
-	"strconv"
+	"fmt"
+	"sync"
+	"time"
 )
 
-var comm = make(chan int, 2)
+var comm = make(chan numbers, 1)
 
-type numbers struct{
-	clientSeq int;
-	serverSep int;
+type numbers struct {
+	clientSeq int
+	serverSeq int
 }
 
-	//SYN clientSeq
-	//SYN-ACK clientSeq=clientAck OG serverSeq
-	//ACK serverSeq(+1)=clientAck  OG clientAck=clientSeq
 func main() {
 	println("---ATTEMPTING CONNECTION BETWEEN CLIENT & SERVER---")
-	
+
 	seqAndAck := numbers{
-		clientSeq : 100,
-		serverSeq : 300,
+		clientSeq: 0,
+		serverSeq: 0,
 	}
 
-	clientSeq <- comm.seqAndAck.clientSeq + 1
+	comm <- seqAndAck
+	var wait sync.WaitGroup
+	wait.Add(2)
+	go client(&seqAndAck, &wait)
+	go server(&seqAndAck, &wait)
+	wait.Wait()
+	println("Connection is established with clientnumber: " + fmt.Sprint(seqAndAck.clientSeq) + " and servernumber: " + fmt.Sprint(seqAndAck.serverSeq))
+}
 
-	comm <- seqAndAck.clientSeq++
-	println("Client tries to synchronize by sending sequence " + strconv.Itoa(clientSeq))
-	
-	clientSeq++
-	comm <- clientSeq ++ && serverSeq
-	println("Server has acknowledged sequence number from client")
-	println("Servers tries to synchronize and sends acknowledge number " + strconv.Itoa(clientSeq) " and sequence number " + strconv.Itoa(serverSeq) " to client")
-	
-	serverSeq++
-	finalAckNumber := <- comm
-	println("Client sends acknowledgement back to server with acknowledge number " + strconv.Itoa(serverSeq) + " and sequence number " + strconv.Itoa(clientSeq))
-	println("Final acknowledge data is received")
-	println("---CONNECTION ESTABLISHED---")
-	
-	
-//	println(finalAck)
+func client(seqAndAck *numbers, wait *sync.WaitGroup) {
+	//client to server
+	<-comm
+	seqAndAck.clientSeq = 100
+	println("client sending clientnumber to server")
+	comm <- *seqAndAck
+	time.Sleep(time.Duration(2000) * time.Millisecond)
+
+	//final acknowledgement
+	<-comm
+	seqAndAck.serverSeq++
+	comm <- *seqAndAck
+	println("client incrementing servernumber, sending final acknowledgement for connection")
+	wait.Done()
+}
+
+func server(seqAndAck *numbers, wait *sync.WaitGroup) {
+	time.Sleep(time.Duration(1000) * time.Millisecond)
+	//server to client
+	<-comm
+	println("Server has recieved client number")
+	seqAndAck.clientSeq++
+	seqAndAck.serverSeq = 300
+	println("Server incrementing clientnumber, sending it+servernumber back to client")
+	comm <- *seqAndAck
+	wait.Done()
 }
