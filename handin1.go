@@ -2,7 +2,8 @@
 - The program ensures that the forks(represented by channels) are always
 available in a non-blocking way.
 	- The channel has a buffersize of 1, meaning it can only hold one message:
-	true or waiting for a false.
+	true or false. True if it is available for pickup, false if another
+	philo is holding the fork.
 - The goroutines constantly listens and handles the availability of the fork
 asynchronously and randomised.
 This combination ensures that philosophers can eventually get forks, eat, and
@@ -65,27 +66,36 @@ func (p *Philosopher) dine(done chan bool) {
 		// Philosopher is thinking
 		fmt.Printf("Philosopher %d is thinking.\n", p.id)
 		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+		//the line above makes it possible to follow the sequence of actions in the terminal
 
 		// Request the left fork
-		<-p.leftFork.ch
-		fmt.Printf("Philosopher %d picked up fork %d (left).\n", p.id, p.leftFork.id)
-
+		left := <-p.leftFork.ch
+		if left {
+			p.leftFork.ch <- false
+			fmt.Printf("Philosopher %d picked up fork %d (left).\n", p.id, p.leftFork.id)
+		}
 		// Request the right fork
-		<-p.rightFork.ch
-		fmt.Printf("Philosopher %d picked up fork %d (right).\n", p.id, p.rightFork.id)
-
+		right := <-p.rightFork.ch
+		if right {
+			p.rightFork.ch <- false
+			fmt.Printf("Philosopher %d picked up fork %d (right).\n", p.id, p.rightFork.id)
+		}
 		// Philosopher is eating
-		fmt.Printf("Philosopher %d is eating.\n", p.id)
-		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
-		p.mealsAmt++
-
+		if left && right {
+			fmt.Printf("Philosopher %d is eating.\n", p.id)
+			p.mealsAmt++
+		}
 		// Put down the right fork
-		p.rightFork.ch <- true
-		fmt.Printf("Philosopher %d put down fork %d (right).\n", p.id, p.rightFork.id)
+		if right {
+			p.rightFork.ch <- true
+			fmt.Printf("Philosopher %d put down fork %d (right).\n", p.id, p.rightFork.id)
+		}
 
 		// Put down the left fork
-		p.leftFork.ch <- true
-		fmt.Printf("Philosopher %d put down fork %d (left).\n", p.id, p.leftFork.id)
+		if left {
+			p.leftFork.ch <- true
+			fmt.Printf("Philosopher %d put down fork %d (left).\n", p.id, p.leftFork.id)
+		}
 	}
 	done <- true
 }
@@ -93,14 +103,15 @@ func (p *Philosopher) dine(done chan bool) {
 // Forks are goroutines that listen for release signals from philosophers.
 func fork(f *Fork) {
 	for {
-		f.ch <- true // Signal that the fork is available
-		<-f.ch       // Wait for a philosopher to take it (waits for a value to be sent over the channel)
+		if len(f.ch) == 0 {
+			f.ch <- true
+		} // Signal that the fork is available, if they have no state
+		//^this is for the initial state of the fork, as it is available first
+		<-f.ch // Wait for a philosopher to take it (waits for a value to be sent over the channel)
 	}
 }
 
-func main1() {
-	rand.Seed(time.Now().UnixNano())
-
+func main() {
 	// Create 5 forks and their channels
 	forks := make([]*Fork, 5)
 	for i := 0; i < 5; i++ {
