@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package program;
+
+service Chatting {
+  //Posts a chatmessage
+  rpc SendChat (ClientRequest) returns (ClientReply) {}
+}
+
+message ClientRequest {
+
+}
+
+message ClientReply {
+
+}
