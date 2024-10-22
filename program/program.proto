@@ -2,15 +2,35 @@ syntax = "proto3";
 
 package program;
 
-service Chatting {
+option go_package = "program/program";
+
+service ChittyChat {
+  //User connects to chatservice
+  rpc ConnectUser(ClientName) returns (SendToStream);
   //Posts a chatmessage
-  rpc SendChat (ClientRequest) returns (ClientReply) {}
+  rpc SendChat(SendMessage) returns (MessagePublished);
 }
 
-message ClientRequest {
-
+message SendMessage{
+  string user = 1;
+  string message = 2;
+  int64 timestamp = 3;
 }
 
-message ClientReply {
+message MessagePublished {
+  string serverName = 1;
+  int64 timestamp = 2;
+}
 
+//message IsMessageSent{
+//  boolean messageSent = 1;
+//}
+
+message ClientName{
+  string user = 1;
+}
+
+message SendToStream{
+  string messageStream = 1;
+  int64 timestamp = 2;
 }
