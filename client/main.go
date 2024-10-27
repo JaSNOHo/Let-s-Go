@@ -9,7 +9,7 @@ import (
 	"flag"
 	"log"
 	"os"
-	"strconv"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -32,19 +32,26 @@ var (
 	scanner = bufio.NewScanner(os.Stdin)
 )
 var (
-	addr = flag.Int("addr", 50051, "the address to connect to")
+	addr = flag.String("addr", "localhost:50051", "the address to connect to")
 	name = flag.String("name", defaultName, "Name of chatter")
 )
 
 func main() {
-	//below line handles previously defined flags
+	//below code handles previously defined flags
 	flag.Parse()
 
-	ServerConn, _ := ConnectServer()
-	stream, err := ServerConn.ConnectClient(context.Background(), &pb.ClientName{
+	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	c := pb.NewChittyChatClient(conn)
+
+	//ServerConn, _ := ConnectServer()
+	stream, err := c.ConnectClient(context.Background(), &pb.ClientName{
 		User: *name})
 	if err != nil {
-		log.Fatalf("Connection failed")
+		log.Fatalf("Connection failed %v", err)
 	}
 
 	participant := &Participant{
@@ -53,10 +60,12 @@ func main() {
 		stream:           &stream,
 	}
 
-	go participant.clientRequest()
+	participant.clientRequest(c)
+	for {
 
+	}
 	//scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
+	/*for scanner.Scan() {
 		input := scanner.Text()
 
 		if input == "login" {
@@ -76,10 +85,40 @@ func main() {
 				Timestamp: participant.lamportTimestamp,
 			})
 		}
-	}
+	}*/
 }
 
-func (p *Participant) clientRequest() {
+func (p *Participant) clientRequest(ServerConn pb.ChittyChatClient) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	for scanner.Scan() {
+		input := scanner.Text()
+
+		if input == "login" {
+			print("Please enter a username:")
+			*name = scanner.Text()
+		} else if input == "logout" {
+			break
+		} else {
+			r, err := ServerConn.SendMessageToProgram(ctx, &pb.SendMessage{User: *name, Message: input, Timestamp: 0})
+			if err != nil {
+				log.Fatalf("could not send message: %v", err)
+			}
+			log.Printf(*name, " is sending a message...")
+
+			log.Printf("Message: %s", r)
+
+			p.lamportTimestamp += 1
+			//incrementing participants lamporttimestamp
+
+			/*ServerConn.SendMessageToProgram(context.Background(), &pb.SendMessage{
+				User:      *name,
+				Message:   input,
+				Timestamp: p.lamportTimestamp,
+			})*/
+		}
+	}
+
 	for {
 		message, err := (*p.stream).Recv()
 		if err != nil {
@@ -97,7 +136,7 @@ func (p *Participant) clientRequest() {
 	}
 }
 
-func ConnectServer() (pb.ChittyChatClient, error) {
+/*func ConnectServer() (pb.ChittyChatClient, error) {
 	conn, err := grpc.NewClient("localhost:"+strconv.Itoa(*addr), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -105,4 +144,4 @@ func ConnectServer() (pb.ChittyChatClient, error) {
 		log.Printf("Connected succesfully to port: %v", *addr)
 	}
 	return pb.NewChittyChatClient(conn), nil
-}
+}*/
