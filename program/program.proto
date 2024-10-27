@@ -6,9 +6,9 @@ option go_package = "program/program";
 
 service ChittyChat {
   //User connects to chatservice
-  rpc ConnectUser(ClientName) returns (SendToStream);
+  rpc SendMessageToProgram(SendMessage) returns (MessageSent);
   //Posts a chatmessage
-  rpc SendChat(SendMessage) returns (MessagePublished);
+  rpc ConnectClient(ClientName) returns (stream MessagePublished);
 }
 
 message SendMessage{
@@ -18,7 +18,7 @@ message SendMessage{
 }
 
 message MessagePublished {
-  string serverName = 1;
+  string message = 1;
   int64 timestamp = 2;
 }
 
@@ -30,7 +30,7 @@ message ClientName{
   string user = 1;
 }
 
-message SendToStream{
-  string messageStream = 1;
+message MessageSent{
+  string server = 1;
   int64 timestamp = 2;
 }

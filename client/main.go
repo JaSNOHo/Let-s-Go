@@ -1,4 +1,6 @@
 // Inspired by the Golang tutorial code for gRPC https://grpc.io/docs/languages/go/quickstart/
+// inspired by https://www.youtube.com/watch?v=WB37L7PjI5k
+
 package main
 
 import (
@@ -7,17 +9,18 @@ import (
 	"flag"
 	"log"
 	"os"
-	"time"
+	"strconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "google.golang.org/grpc"
+	pb "Let-s-Go/program"
 )
 
 type Participant struct {
 	name             string
-	lamportTimestamp int
+	lamportTimestamp int64
+	stream           *pb.ChittyChat_ConnectClientClient
 }
 
 // unsure if we need default name, when we technically REQUIRE a name
@@ -26,32 +29,34 @@ const (
 )
 
 var (
-	addr = flag.String("addr", "localhost:50051", "the address to connect to")
+	scanner = bufio.NewScanner(os.Stdin)
+)
+var (
+	addr = flag.Int("addr", 50051, "the address to connect to")
 	name = flag.String("name", defaultName, "Name of chatter")
 )
 
 func main() {
+	//below line handles previously defined flags
 	flag.Parse()
 
-	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ServerConn, _ := ConnectServer()
+	stream, err := ServerConn.ConnectClient(context.Background(), &pb.ClientName{
+		User: *name})
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("Connection failed")
 	}
-	defer conn.Close()
-	//client := &pb.NewClient(conn) //get the protobuff source from imports
-	//above 7 lines of code form the Golang gRPC example
 
-	clientRequest()
-}
+	participant := &Participant{
+		name:             defaultName,
+		lamportTimestamp: 0,
+		stream:           &stream,
+	}
 
-// inspired by https://www.youtube.com/watch?v=WB37L7PjI5k
-func clientRequest() {
-	for {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		//above two lines taken from Golang official example
+	go participant.clientRequest()
 
-		scanner := bufio.NewScanner(os.Stdin)
+	//scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
 		input := scanner.Text()
 
 		if input == "login" {
@@ -60,22 +65,44 @@ func clientRequest() {
 		} else if input == "logout" {
 			break
 		} else {
-			message := scanner.Text()
-			r, err := c.GetMessage(ctx, &pb.ClientRequest{Name: *name})
-			//above line with err modified slightly from Golang official example
+			log.Printf(*name, " is sending a message...")
 
-			if err != nil {
-				log.Fatalf("Could not send message: %v", err)
-				//unsure what %v prints above - maybe name, maybe message
-			}
-			//above message mostly taken from Golang example
-			log.Printf(*name + ": " + message)
-			//print the message and name of person. Log takes care of timestamp
+			participant.lamportTimestamp += 1
+			//incrementing participants lamporttimestamp
 
-			time.Sleep(1)
-			//sleep for 1 to aid flow of messages
-
-			//do something with lamport timestamp here
+			ServerConn.SendMessageToProgram(context.Background(), &pb.SendMessage{
+				User:      *name,
+				Message:   input,
+				Timestamp: participant.lamportTimestamp,
+			})
 		}
 	}
+}
+
+func (p *Participant) clientRequest() {
+	for {
+		message, err := (*p.stream).Recv()
+		if err != nil {
+			log.Fatalf("Failed to send message due to: %v", err)
+		}
+
+		if message.Timestamp > p.lamportTimestamp {
+			p.lamportTimestamp = message.Timestamp + 1
+		} else {
+			p.lamportTimestamp += 1
+		}
+		//above 5 lines from someone elses code - can we use this?
+
+		log.Printf(p.name, " has sent message: ", message.Message, " at time: ", p.lamportTimestamp)
+	}
+}
+
+func ConnectServer() (pb.ChittyChatClient, error) {
+	conn, err := grpc.NewClient("localhost:"+strconv.Itoa(*addr), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	} else {
+		log.Printf("Connected succesfully to port: %v", *addr)
+	}
+	return pb.NewChittyChatClient(conn), nil
 }
