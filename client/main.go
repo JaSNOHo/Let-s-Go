@@ -1,5 +1,5 @@
 // Inspired by the Golang tutorial code for gRPC https://grpc.io/docs/languages/go/quickstart/
-// inspired by https://www.youtube.com/watch?v=WB37L7PjI5k
+// Inspired by https://www.youtube.com/watch?v=WB37L7PjI5k
 
 package main
 
@@ -23,7 +23,6 @@ type Participant struct {
 	stream           *pb.ChittyChat_ConnectClientClient
 }
 
-// unsure if we need default name, when we technically REQUIRE a name
 const (
 	defaultName = "Anonymous"
 )
@@ -47,7 +46,6 @@ func main() {
 	defer conn.Close()
 	c := pb.NewChittyChatClient(conn)
 
-	//ServerConn, _ := ConnectServer()
 	stream, err := c.ConnectClient(context.Background(), &pb.ClientName{
 		User: *name})
 	if err != nil {
@@ -61,31 +59,6 @@ func main() {
 	}
 
 	participant.clientRequest(c)
-	for {
-
-	}
-	//scanner := bufio.NewScanner(os.Stdin)
-	/*for scanner.Scan() {
-		input := scanner.Text()
-
-		if input == "login" {
-			print("Please enter a username:")
-			*name = scanner.Text()
-		} else if input == "logout" {
-			break
-		} else {
-			log.Printf(*name, " is sending a message...")
-
-			participant.lamportTimestamp += 1
-			//incrementing participants lamporttimestamp
-
-			ServerConn.SendMessageToProgram(context.Background(), &pb.SendMessage{
-				User:      *name,
-				Message:   input,
-				Timestamp: participant.lamportTimestamp,
-			})
-		}
-	}*/
 }
 
 func (p *Participant) clientRequest(ServerConn pb.ChittyChatClient) {
@@ -97,51 +70,44 @@ func (p *Participant) clientRequest(ServerConn pb.ChittyChatClient) {
 		if input == "login" {
 			print("Please enter a username:")
 			*name = scanner.Text()
-		} else if input == "logout" {
-			break
-		} else {
-			r, err := ServerConn.SendMessageToProgram(ctx, &pb.SendMessage{User: *name, Message: input, Timestamp: 0})
-			if err != nil {
-				log.Fatalf("could not send message: %v", err)
-			}
-			log.Printf(*name, " is sending a message...")
-
+			/*r, err := ServerConn.SendMessageToProgram(ctx, &pb.SendMessage{User: *name, Message: *name + " has joined ChittyChat", Timestamp: 0})
+				if err != nil {
+					log.Fatalf("You're invisible", err)
+				}
 			log.Printf("Message: %s", r)
 
-			p.lamportTimestamp += 1
-			//incrementing participants lamporttimestamp
+			p.lamportTimestamp += 1*/
 
-			/*ServerConn.SendMessageToProgram(context.Background(), &pb.SendMessage{
-				User:      *name,
-				Message:   input,
-				Timestamp: p.lamportTimestamp,
-			})*/
-		}
-	}
+		} else if input == "logout" {
+			/*r, err := ServerConn.SendMessageToProgram(ctx, &pb.SendMessage{User: *name, Message: *name + " has left ChittyChat", Timestamp: 0})
+				if err != nil {
+					log.Fatalf("You're invisible", err)
+				}
+			log.Printf("Message: %s", r)
 
-	for {
-		message, err := (*p.stream).Recv()
-		if err != nil {
-			log.Fatalf("Failed to send message due to: %v", err)
-		}
-
-		if message.Timestamp > p.lamportTimestamp {
-			p.lamportTimestamp = message.Timestamp + 1
+			p.lamportTimestamp += 1*/
+			break
 		} else {
-			p.lamportTimestamp += 1
-		}
-		//above 5 lines from someone elses code - can we use this?
+			if len(input) > 128 {
+				log.Printf("Keep your message to a maximum of 128 characters")
+			} else {
+				r, err := ServerConn.SendMessageToProgram(ctx, &pb.SendMessage{User: *name, Message: input, Timestamp: 0})
+				if err != nil {
+					log.Fatalf("could not send message: %v", err)
+				}
+				log.Printf(*name, " is sending a message...")
 
-		log.Printf(p.name, " has sent message: ", message.Message, " at time: ", p.lamportTimestamp)
+				log.Printf("Message: %s", r)
+
+				p.lamportTimestamp += 1
+				//incrementing participants lamporttimestamp
+
+				/*ServerConn.SendMessageToProgram(context.Background(), &pb.SendMessage{
+					User:      *name,
+					Message:   input,
+					Timestamp: p.lamportTimestamp,
+				})*/
+			}
+		}
 	}
 }
-
-/*func ConnectServer() (pb.ChittyChatClient, error) {
-	conn, err := grpc.NewClient("localhost:"+strconv.Itoa(*addr), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	} else {
-		log.Printf("Connected succesfully to port: %v", *addr)
-	}
-	return pb.NewChittyChatClient(conn), nil
-}*/

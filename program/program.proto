@@ -22,10 +22,6 @@ message MessagePublished {
   int64 timestamp = 2;
 }
 
-//message IsMessageSent{
-//  boolean messageSent = 1;
-//}
-
 message ClientName{
   string user = 1;
 }

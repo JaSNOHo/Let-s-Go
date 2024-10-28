@@ -1,3 +1,6 @@
+// Inspired by the Golang tutorial code for gRPC https://grpc.io/docs/languages/go/quickstart/
+// Inspired by https://www.youtube.com/watch?v=WB37L7PjI5k
+
 package main
 
 import (
@@ -10,14 +13,11 @@ import (
 	pb "Let-s-Go/program"
 
 	"google.golang.org/grpc"
-	//"google.golang.org/grpc/encoding/proto"
 )
 
 var (
 	port = flag.Int("port", 50051, "The server port")
 )
-
-//above code from Golang gRPC example
 
 type Participants struct {
 	pName  string
@@ -35,8 +35,6 @@ type Server struct {
 func main() {
 	//below line handles previously defined flags
 	flag.Parse()
-
-	//server :=grpc.TurnOnServer()
 
 	server := &Server{
 		port:             *port,
@@ -58,7 +56,6 @@ func (s *Server) GetMessage(_ context.Context, in *pb.SendMessage) (*pb.SendMess
 //above code adapted from Golang gRPC example
 
 func TurnOnServer(server *Server) {
-
 	//this method is based on code provided by ChatGPT
 
 	listener, err := net.Listen("tcp", ":50051")
@@ -149,8 +146,7 @@ func (s *Server) DisconnectUser(ctx context.Context, in *pb.ClientName) (*pb.Sen
 	return &pb.SendMessage{User: clientName, Message: leaveMessage, Timestamp: s.LamportTimestamp}, nil
 }
 
-// MessagePublish()
-func (s *Server) broadcast(msg *pb.SendMessage) {
+func (s *Server) MessagePublish(msg *pb.SendMessage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -162,5 +158,3 @@ func (s *Server) broadcast(msg *pb.SendMessage) {
 */
 //FindMessage()
 //SendToStream()
-
-/// User: mnfushnfoiew gji (timestamp)
